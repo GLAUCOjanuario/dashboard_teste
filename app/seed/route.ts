@@ -108,15 +108,19 @@ async function seedRevenue() {
 
 // ... (após a função seedRevenue)
 
-async function main() {
+export async function GET() {
   try {
-    // Apague as tabelas existentes (opcional, mas bom para recriar o banco de dados)
+    // Apague as tabelas existentes
     await sql.unsafe('DROP TABLE IF EXISTS revenue CASCADE;');
     await sql.unsafe('DROP TABLE IF EXISTS customers CASCADE;');
     await sql.unsafe('DROP TABLE IF EXISTS invoices CASCADE;');
     await sql.unsafe('DROP TABLE IF EXISTS users CASCADE;');
+    
+    // Use Promise.all para executar as funções de seed em paralelo.
+    // O uso de sql.begin (do seu código original) pode ser mais seguro
+    // se você quiser garantir que todas as operações sejam atômicas, mas Promise.all
+    // também funciona para este caso.
 
-    // Rodar todas as funções de seed em paralelo
     await Promise.all([
       seedUsers(),
       seedCustomers(),
@@ -125,11 +129,18 @@ async function main() {
     ]);
 
     console.log('Database seeded successfully!');
+
+    // Retorna uma resposta JSON para o navegador
+    return Response.json({ message: 'Database seeded successfully' });
+
   } catch (error) {
     console.error('An error occurred while seeding the database:', error);
-    throw error;
+    
+    // Retorna um erro 500 para o navegador
+    return Response.json(
+      { error: 'Failed to seed database.', details: error }, 
+      { status: 500 }
+    );
   }
 }
-
-main(); // Chamada para iniciar o script
 
