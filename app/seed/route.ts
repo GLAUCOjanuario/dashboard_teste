@@ -1,8 +1,13 @@
+const dotenv = require('dotenv');
+dotenv.config();
+
+
 import bcrypt from 'bcrypt';
 import postgres from 'postgres';
 import { invoices, customers, revenue, users } from '../lib/placeholder-data';
 
-const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
+//const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
+const sql = postgres(process.env.POSTGRES_URL_NON_POOLING!, { ssl: 'require' });
 
 async function seedUsers() {
   await sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
@@ -101,17 +106,30 @@ async function seedRevenue() {
   return insertedRevenue;
 }
 
-export async function GET() {
+// ... (após a função seedRevenue)
+
+async function main() {
   try {
-    const result = await sql.begin((sql) => [
+    // Apague as tabelas existentes (opcional, mas bom para recriar o banco de dados)
+    await sql.unsafe('DROP TABLE IF EXISTS revenue CASCADE;');
+    await sql.unsafe('DROP TABLE IF EXISTS customers CASCADE;');
+    await sql.unsafe('DROP TABLE IF EXISTS invoices CASCADE;');
+    await sql.unsafe('DROP TABLE IF EXISTS users CASCADE;');
+
+    // Rodar todas as funções de seed em paralelo
+    await Promise.all([
       seedUsers(),
       seedCustomers(),
       seedInvoices(),
       seedRevenue(),
     ]);
 
-    return Response.json({ message: 'Database seeded successfully' });
+    console.log('Database seeded successfully!');
   } catch (error) {
-    return Response.json({ error }, { status: 500 });
+    console.error('An error occurred while seeding the database:', error);
+    throw error;
   }
 }
+
+main(); // Chamada para iniciar o script
+
